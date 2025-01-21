@@ -1,0 +1,233 @@
+---
+title: "STAT318/462 Lab 7: Cluster analysis"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+In this lab you will work through Section 10.5 of the course textbook, An Introduction to Statistical Learning (there is a link to this textbook on the Learn page). The R code from Section 10.5 is given below. I have added R code for computing the silhouette coefficient and distance matrices.
+
+You should play around with this R code and data in order to explore and gain a feel for how each of the two clustering algorithms work.
+
+## First example data set
+
+First, we construct a dataset to analyse using cluster analysis and hierarchical cluster analysis:
+
+```{r}
+set.seed(2)
+x = matrix(rnorm(50 * 2), ncol = 2)
+x[1:25, 1] = x[1:25, 1] + 3
+x[1:25, 2] = x[1:25, 2] - 4
+plot(x)
+```
+
+
+### Cluster analysis using K-means clustering
+
+We can cluster the data, specifying that there should be 2 clusters (k=2). We specify 20 there should be 20 runs of the algorithm, each with a different initial random allocation of points to clusters:
+
+```{r}
+km.out = kmeans(x, 2, nstart = 20)
+km.out$cluster
+plot(x, col = (km.out$cluster  +1),      
+     main = "K-Means Clustering Results with K=2", 
+     xlab = "", ylab = "", pch = 20, cex = 2)
+```
+
+Then repeat the same steps but specifying 3 clusters (k=3), again with 20 different runs of the algorithm:
+
+```{r}
+set.seed(4)
+km.out = kmeans(x, 3, nstart = 20)
+km.out
+plot(x, col = (km.out$cluster + 1), 
+     main = "K-Means Clustering Results with K=3", 
+     xlab = "", ylab = "", pch = 20, cex = 2)
+```
+
+Since the result depends on the initial random allocation of points to clusters, we can compare the decision of which points lie in which clusters for a single run of the algorithm: 
+
+```{r}
+set.seed(3)
+km.out = kmeans(x, 3, nstart = 1)
+km.out$tot.withinss
+plot(x, col = (km.out$cluster + 1), 
+     main = "K-Means Clustering Results with K=3", 
+     xlab = "", ylab = "", pch = 20, cex = 2)
+```
+
+with the outcome when we specify 100 different runs, and select the 'best':
+
+```{r}
+km.out = kmeans(x, 3, nstart = 100)
+km.out$tot.withinss
+plot(x, col = (km.out$cluster + 1), 
+     main = "K-Means Clustering Results with K=3", 
+     xlab = "", ylab = "", pch = 20, cex = 2)
+```
+
+We can look at the silhouette coefficient if we use the package 'cluster':
+
+```{r}
+library(cluster)
+silval = rep(0, 9)
+for (k in 2:10) {
+  C = kmeans(x, k, nstart = 20)
+  s = silhouette(C$cluster, dist(x))
+  xx = summary(s)
+  silval[k - 1] = xx$avg.width
+}
+plot(2:10, silval, xlab = "k", type = "b")
+```
+
+
+### Cluster analysis using hierarchical clustering
+
+We first specify a distance matrix:
+
+```{r}
+EG = matrix(c(1, 2, 6, 2, 3, 1, 1, 3, 4, 5), nrow = 5, ncol = 2)
+EG
+dist(EG, 'manhattan', diag = TRUE, upper = TRUE)
+```
+
+We can hierarchically cluster the same data as we used in the K-means examples, but now using the three linkage methods:
+
+```{r}
+hc.complete = hclust(dist(x), method = "complete")
+hc.average  = hclust(dist(x), method = "average")
+hc.single   = hclust(dist(x), method = "single")
+```
+
+We can plot the three dendrograms on the same plot:
+
+```{r}
+par(mfrow = c(1, 3))
+plot(hc.complete, main = "Complete Linkage", xlab = "", sub = "", cex = .9)
+plot(hc.average,  main = "Average Linkage",  xlab = "", sub = "", cex = .9)
+plot(hc.single,   main = "Single Linkage",   xlab = "", sub = "", cex = .9)
+par(mfrow = c(1, 1))
+```
+
+and cut the trees to define clusters:
+
+```{r}
+cutree(hc.complete, 2)
+plot(x, col = cutree(hc.complete, 2))
+plot(x, col = cutree(hc.average,  2))
+plot(x, col = cutree(hc.single,   2))
+plot(x, col = cutree(hc.single,   4))
+```
+
+## Second example data set
+
+We construct a dataset to analyse using cluster analysis and hierarchical cluster analysis. In this second example, we write a function that generates bivariate normal random variables:
+
+```{r}
+rbivariate <- function(mean.x = 0, sd.x = 1, mean.y = 0, sd.y = 1, r = 0, n = 100) {
+   z1 = rnorm(n)
+   z2 = rnorm(n)
+   x = sqrt(1 - r^2) * sd.x * z1 + r * sd.x * z2 + mean.x
+   y = sd.y * z2 + mean.y
+   return(cbind(x, y))
+}
+```
+
+and then use this function to create a dataset to analyse using the K-means clustering and the hierarchical clustering algorithms. 
+
+```{r}
+set.seed(10)
+c1 = rbivariate(mean.x = 1.5, sd.x = .1, mean.y = .5,  sd.y = .1, n = 50)
+c2 = rbivariate(mean.x = 0,   sd.x = .5, mean.y = 0,   sd.y = .5, n = 200)
+c3 = rbivariate(mean.x = 1.5, sd.x = .1, mean.y = -.5, sd.y = .1, n = 50)
+mydata = rbind(c1, c2, c3)
+plot(mydata)
+```
+
+### Cluster analysis using K-means clustering
+
+We can repeat the same steps as we used in the first example, to explore how this clustering algorithm works:
+
+```{r}
+km.out = kmeans(mydata, 3)
+km.out$tot.withinss
+plot(mydata, col = (km.out$cluster + 1), 
+     main = "K-Means Clustering Results with K=3", 
+     xlab = "", ylab = "", pch = 20, cex = 2)
+```
+
+Apply k-means for 3 clusters and with 1000 restarts (k=3):
+
+```{r}
+km.out = kmeans(mydata, 3, nstart = 1000)
+km.out$tot.withinss
+plot(mydata, col = (km.out$cluster + 1), 
+     main = "K-Means Clustering Results with K=3", 
+     xlab = "", ylab = "", pch = 20, cex = 2)
+```
+
+Look at the silhouette coefficient:
+
+```{r}
+library(cluster)
+silval = rep(0, 9)
+for (k in 2:10) {
+  C = kmeans(mydata, k, nstart = 100)
+  s = silhouette(C$cluster, dist(mydata))
+  xx = summary(s)
+  silval[k - 1] = xx$avg.width
+}
+plot(2:10, silval, type = "b")
+```
+
+Apply k-means for 7 clusters and with 100 restarts (k=7):
+
+```{r}
+km.out = kmeans(mydata, 7, nstart = 100)
+km.out$tot.withinss
+plot(mydata, col = (km.out$cluster + 1), 
+     main = "K-Means Clustering Results with K=7", 
+     xlab = "", ylab = "", pch = 20, cex = 2)
+```
+
+We can also run the clustering algorithm with the 'correct' centres specified:
+
+```{r}
+km.out = kmeans(mydata, 
+                centers = rbind(c(1.5, 0.5), c(0, 0), c(1.5, -0.5)), 
+                nstart = 100)
+km.out$tot.withinss
+plot(mydata, col = (km.out$cluster + 1), 
+     main = "K-Means Clustering Results with K=3", 
+     xlab = "", ylab = "", pch = 20, cex = 2)
+```
+
+### Cluster analysis using hierarchical clustering
+
+We can analyse the data using complete, single, and average linkage, and compare the results:
+
+```{r}
+hc.complete = hclust(dist(mydata), method = "complete")
+plot(hc.complete, main = "Complete Linkage", xlab = "", sub = "", cex = .9)
+plot(mydata, col = cutree(hc.complete, 3))
+```
+
+```{r}
+hc.single = hclust(dist(mydata), method = "single")
+plot(hc.complete, main = "Single Linkage", xlab = "", sub = "", cex = .9)
+plot(mydata, col = cutree(hc.single, 3))
+```
+
+```{r}
+hc.average = hclust(dist(mydata), method = "average")
+plot(hc.complete,main = "Average Linkage", xlab = "", sub = "", cex = .9)
+plot(mydata, col = cutree(hc.average, 3))
+```
+
+
+***
+

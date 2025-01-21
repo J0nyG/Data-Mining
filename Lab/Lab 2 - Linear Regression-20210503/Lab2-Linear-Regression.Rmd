@@ -1,0 +1,288 @@
+---
+title: "Linear Regression"
+output: html_notebook
+---
+
+# STAT318/462 Lab 2 
+
+In this lab you will work through Section 3.6 of the course textbook, An Introduction to Statistical Learning (there is a
+link to this textbook on the Learn page). The R code from Section 3.6 is given below. We will not be covering anova in 
+section 3.6.5 and we will not be writing functions as in section 3.6.7.
+
+##Libraries
+The <code>library()</code> function loads a previously installed library into the the current session.
+A library contains functions and datasets. In this case we are after data sets from the MASS & ISLR libraries.
+```{r}
+library(MASS)
+library(ISLR)
+```
+
+
+##Simple Linear Regression
+The Boston data set has median house values for 506 neighborhoods around Boston. We will seek to predict
+this using the accompanying 13 predictors such as
+
++ rm (average number of rooms per house),
++ age (average age of houses), 
++ lstat (percent of households with low socioeconomic status).
+```{r}
+fix(Boston)
+```
+
+The variable names are shown below. Note that the "target" variable (median house price) is the last column.
+```{r}
+names(Boston)
+```
+You can learn more about this data set by typeing <code>?Boston</code>
+
+We shall begin by using the <code>lm()</code> function.
+This will fit a linear model using a descriptive formula of how to perform the modelling.
+The formula reads "predict **medv** from **lstat**"
+
+```{r eval=FALSE}
+lm.fit = lm(medv~lstat)
+```
+> Error in eval ( expr , envir , enclos ) : Object " medv " not found  
+
+This does not work! R cannot locate variables medv and lstat. The next attempt should include where they can be found.
+
+```{r}
+lm.fit = lm(medv~lstat, data = Boston)
+```
+
+
+If we <code>attach</code> the Boston data set we will not need the <code>data = Boston</code> parameter.
+```{r message=FALSE, warning=FALSE}
+attach(Boston)
+lm.fit = lm(medv~lstat)
+```
+
+We can get the output printed by using the lm.fit variable as a command
+```{r}
+lm.fit
+```
+
+We can also request a summary of the model
+```{r}
+summary(lm.fit)
+```
+What else does the lm.fit variable contain?
+```{r}
+names(lm.fit)
+```
+It is generally better to use existing functions to extract information out of models. <code>coef()</code> return the model's regression coefficients.
+```{r}
+coef(lm.fit)
+```
+<code>confint()</code> return the model's confidence intervals for the regression coefficients.
+```{r}
+confint(lm.fit)
+```
+
+The <code>predict()</code> function can be used to produce confidence intervals and
+prediction intervals for the model.
+```{r}
+predict(lm.fit, data.frame(lstat = c(5,10,15)), interval = "confidence")
+```
+The 95 % confidence interval associated with an **lstat** value of
+10 is (24.47, 25.63)
+
+```{r}
+predict(lm.fit, data.frame(lstat = c(5,10,15)), interval = "prediction")
+```
+
+The 95 % prediction interval associated with an **lstat** value of
+10 is (12.828, 37.28). The confidence and prediction intervals are centered around the
+same point (a predicted value of 25.05 for medv when lstat equals 10), but
+prediction intervals are substantially wider than confidence intervals.  
+  
+  
+We will now plot **medv** and **lstat** along with the model line using the <code>plot()</code> and <code>abline()</code> functions.  
+```{r}
+plot(lstat, medv)
+abline(lm.fit)
+```
+
+You may feel there is some non-linearity in the relationship between **lstat**
+and **medv**. We will explore this issue later in this lab.  
+
+The <code>abline()</code> function can be used to draw any line, not just the least squares regression line. The line is added to the current graph. To draw a line with intercept a and slope b, we type <code>abline(a,b)</code>.  
+
+Below we experiment with some additional settings for plotting lines and points. 
+
+<code>lw</code> parameter deals with line width  
+<code>pch</code> parameter deals with plotting symbols  
+<code>col</code> parameter deals with colours
+```{r}
+plot(lstat, medv)
+abline(lm.fit, lwd = 3)
+abline(lm.fit, lwd = 3 , col = "red")
+plot(lstat, medv, col = "red")
+plot(lstat, medv, pch = 20)
+plot(lstat, medv, pch = "+")
+plot(1:20, 1:20, pch = 1:20)
+```
+
+##Diagnositic plots
+Four diagnostic plots are automatically produced by applying the plot() function directly to the output from lm().
+
+In general, the <code>plot(lm.fit)</code> command will produce one plot at a time, and hitting Enter will generate
+successive plots. However, it is often convenient to view all four plots together.We can achieve this by using the par() function, which tells R to split the display screen into separate panels so that multiple plots can be viewed simultaneously. For example, <code>par(mfrow=c(2,2))</code> divides the plotting region into a 2 × 2 grid of panels.
+```{r}
+par(mfrow = c(2,2))
+plot(lm.fit)
+```
+
+The data behind these plots can be extracted using the <code>residuals()</code> function. The function <code>rstudent()</code> will return the studentized residuals. 
+  
+we can independently plot the residuals against the fitted values.
+
+```{r}
+plot(predict(lm.fit), residuals(lm.fit ))
+plot(predict(lm.fit), rstudent(lm.fit))
+```
+
+Leverage statistics can be computed using the <code>hatvalues()</code> function.  
+```{r message=FALSE, warning=FALSE}
+plot(hatvalues(lm.fit))
+which.max(hatvalues(lm.fit))
+```
+
+The <code>which.max()</code> function identifies the index of the largest element of a which.max() vector. In this case, it tells us which observation has the largest leverage statistic.
+
+***
+
+##Multiple Linear Regression
+Previously we had many predictor variables but we chose to just use **lstat**. Now we will use more than one predictor variable. Again we will use the lm() function but now we need to create a different formula.  
+The syntax **lm(y∼x1+x2+x3)** is used to fit a model with three predictors: **x1,** **x2**, and **x3**. The <code>summary()</code> function will now output the regression coefficients for all these predictors.  
+  
+We shall add the predictor **age**
+```{r}
+lm.fit = lm(medv~lstat+age, data = Boston)
+summary(lm.fit)
+```
+
+The Boston data set has 13 predictors, so it would be tedious to have to name all thirteen. In stead we can use the "dot" shorthand.
+```{r}
+lm.fit = lm(medv~., data = Boston)
+summary(lm.fit)
+```
+We can access the individual components of a summary object by name. Type <code>?summary.lm</code> to see what is available. Hence <code>summary(lm.fit)\$r.sq</code> gives us the R^2^, and <code>summary(lm.fit)\$sigma</code> gives us the RSE. 
+
+The Variance Inflation Factor, <code>vif()</code>,  function, (part of the car package), can be used to compute variance inflation factors. Most VIF’s are low to moderate for this data. 
+```{r message=FALSE, warning=FALSE}
+library(car)
+vif(lm.fit)
+```
+
+Suppose you wanted to create a regression fit using all but one variable? Let's say we leave out **age**. To achieve this we subtract the variable **age** in the formula.
+```{r}
+lm.fit1 = lm(medv~.-age, data = Boston)
+summary(lm.fit1)
+```
+
+Alternatively, the <code>update()</code> function can be used.
+```{r}
+lm.fit1 = update(lm.fit, ~.-age)
+```
+***
+
+##Interaction Terms
+Interaction terms are additional variables that result from product-combinations of the existing variables. The formula has a short-hand style for describing interactions.
+
+The formula syntax **lstat:black** tells R to include an interaction term between **lstat** and **black** .
+
+***
+
+What is an interaction term? Lets consider three scenarios:
+
+####numeric : numeric
+Suppose a = c(1,2,3,4) and b = c(11,12,13,14)  
+The formula "a:b" would be c(11, 24, 39, 56)  
+  i.e. a × b  
+  i.e. c(1×11, 2×12, 3×13, 4×14)
+  i.e. c(11, 24, 56)
+
+####numeric : factor
+Suppose a = c(1,2,3,4) and b = as.factor(c("Y","N","N","Y"))  
+The formula "a:b" would produce two numeric columns called: "a:Y" and "a:N"  (two because b has two levels: Y & N)  
+a:Y is c(1, 0, 0, 4)  
+a:N is c(0, 2, 3, 0)  
+
+####factor : factor
+Suppose a = as.factor(c("Green", "Green", "Yellow", "Blue")) and b = as.factor(c("Y","N","N","Y"))  
+The formula "a:b" would produce a single factor column: "a:b""  
+a:b is factor(c("Green.Y", "Green.N", "Yellow.N", "Blue.Y"))
+
+***
+
+The formula syntax **lstat\*age** simultaneously includes **lstat**, **age**, and the interaction term **lstat × age** as predictors; it is a shorthand for **lstat+age+lstat:age**
+```{r}
+summary(lm(medv~lstat*age, data = Boston))
+```
+
+##Non-linear Transformations of the Predictors
+
+What about a linear model involving non-linear transformations of predictors?
+For example, if there is a variable called **x1**, I want to add the variable **x1^2^** as a predictor. How is this done?  
+  
+This can be done through the use of the following (nasty!) syntax: **I(x1^2)**  
+The outer **I()** wrapper tells R that what is inside should be treated as a mathematical formula. For example **I(x1\*x2/x3)** would do a multiplication and division - NOT interactions as previous.
+
+```{r}
+lm.fit2 = lm(medv~lstat+I(lstat^2))
+summary(lm.fit2)
+```
+
+The near-zero p-value associated with the quadratic term suggests that it leads to an improved model.  
+  
+In order to create a cubic fit, we can add a predictor of the form
+I(X^3) . However, this approach can start to get cumbersome for higher-
+order polynomials. A better approach involves using the <code>poly()</code> function
+to create the polynomial within the formula. The following command
+produces a fifth-order polynomial 
+```{r}
+lm.fit5 = lm(medv~poly(lstat,5))
+summary(lm.fit5)
+```
+
+This suggests that a fifth order polynomial in **lstat**, leads to an improvement in the model fit.  
+  
+What about other non-linear functions? sin()? cos()? log()? These typicially do not need to be wrapped in I() but if they were it would do no harm.
+```{r}
+summary(lm(medv~log(rm),data = Boston))
+```
+
+***
+
+
+##Qualitative Predictors
+We shall use a data set called "Carseats" from the ISLR library. We will attempt to predict Sales (child car seat sales) in 400 locations based on a number of qualitative predictors.
+```{r}
+fix(Carseats)
+names(Carseats)
+```
+
+Did you notice that **ShelveLoc** was not a numeric variable? This represents the space within a store in which the car seat is displayed. The predictor **Shelveloc** has three possible values: *Bad*, *Medium*, and *Good*.  Given a qualitative variable such as **Shelveloc** , R may generate dummy variables automatically.  
+  
+Let's fit a multiple regression fit that includes some interaction terms
+```{r}
+lm.fit = lm(Sales~.+Income:Advertising+Price:Age, data = Carseats)
+summary(lm.fit)
+```
+
+*Contrasts* are styles of turning qualitative variables into one or more numeric variables. Use <code>?contrasts</code> to learn about other contrasts.
+
+The <code>contrasts()</code> function returns the coding that R uses for the dummy variables it may create.
+```{r}
+attach(Carseats)
+contrasts(ShelveLoc)
+```
+
+R has created a **ShelveLocGood** dummy variable (like the first numeric column above) that takes on a value of 1 if the shelving location is *good*, and 0 otherwise. It has also created a **ShelveLocMedium** dummy variable (like numeric column 2 above) that equals 1 if the shelving location is *medium*, and 0 otherwise. A *bad* shelving location corresponds to a zero for each of the two dummy variables.  
+  
+The fact that the coefficient for ShelveLocGood in the regression output is positive indicates that a good shelving location is associated with high sales (relative to a bad location).
+
+And **ShelveLocMedium** has a smaller positive coefficient, indicating that a medium shelving location leads to higher sales than a bad shelving location but lower sales than a good shelving location.
+  
+End of Lab 2 

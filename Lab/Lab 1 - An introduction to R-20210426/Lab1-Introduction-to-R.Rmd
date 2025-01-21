@@ -1,0 +1,454 @@
+---
+title: "Introduction To R"
+author: "Nick Ward"
+date: "20 February 2019"
+output: html_notebook
+---
+
+
+#STAT318/462 Lab 1
+
+In this lab you will work through Section 2.3 of the course
+textbook, An Introduction to Statistical Learning (there is a
+link to this textbook on the Learn page). The R code from 
+Section 2.3 is given below.
+
+
+##Columns
+In R, variables are designed to hold a quantity of things (e.g. numbers or strings) but of course a quantity of one thing is also allowed.  
+Let's start by creating a column variable. 
+```{r}
+x <- c(1,3,2,5)
+x
+```
+The **[1]** part of the above output shows that the first line begins from one. When long variables are printed the values will wrap. In that situation each wrapped line will begin with the index that begins that row. 
+
+The above snippet uses the <code> <- </code> assignment. We can also use the more familiar <code> = </code> assignment.  
+For our purposes the two types of assignment are equivalent.
+```{r}
+x = c(1,6,2)
+x
+```
+
+When a line of code is run interactively and that line does no assignment to a variable then it is implied that you want to print the result of the line to the RStudio console. The next line will produce an assignment but no output.
+```{r}
+y = c(1,4,3)
+```
+
+The size of a variable is the quantity of things that it holds. We use the <code>length()</code> function. This will be printed on the console.
+```{r}
+length(x)
+```
+
+Again for the y variable
+```{r}
+length(y)
+```
+
+Since these are the same length, adding them together makes sense.
+```{r}
+x+y
+```
+This enacts an entry-wise addition.  
+*What would have happened if the columns were not the same length?*
+
+
+***
+##Variables
+
+In R you find out what variables exist by using <code>ls</code>
+```{r}
+ls()
+```
+This has its origins in Linux where <code>ls</code> lists files.
+
+In R you delete a variable by using <code>rm()</code>
+```{r}
+rm(x,y)
+ls()
+```
+This frees up the memory associated with the variables. Again this has its origins in Linux.
+*What would happen if you named the variables instead of supplying them? <code>rm("x","y")</code>*  
+
+To delete every variable you can combine the commands like this
+```{r}
+rm(list=ls())
+```
+
+***
+
+##Matrices
+Whereas **Columns** are one dimensional variables, **Matrices** are two dimensional. 
+
+To get help on a keyword put a question mark in front and use it as an R command. 
+```{r}
+?matrix
+```
+This will search through all installed R libraries. 
+
+> matrix {base}
+> Matrices  
+> 
+> Description  
+> 
+> matrix creates a matrix from the given set of values.  
+> 
+> as.matrix attempts to turn its argument into a matrix.  
+> 
+> is.matrix tests if its argument is a (strict) matrix.  
+> 
+> Usage  
+> 
+> matrix(data = NA, nrow = 1, ncol = 1, byrow = FALSE, dimnames = NULL)
+> 
+> as.matrix(x, ...)  
+> S3 method for class 'data.frame'  
+> as.matrix(x, rownames.force = NA, ...)  
+> 
+> is.matrix(x)  
+> Arguments  
+> 
+> data	  
+> an optional data vector (including a list or expression vector). Non-atomic classed R objects are coerced by as.vector and all attributes discarded.  
+> nrow	
+> the desired number of rows.  
+> ncol	
+> the desired number of columns.  
+> byrow	 
+> logical. If FALSE (the default) the matrix is filled by columns, otherwise the matrix is filled by rows.  
+> dimnames	
+> A dimnames attribute for the matrix: NULL or a list of length 2 giving the row and column names respectively. An empty list is treated as NULL, and a list of length one as row names. The list can be named, and the list names will be used as names for the dimensions.  
+> x	  
+> an R object.  
+> ...	  
+> additional arguments to be passed to or from methods.  
+> rownames.force	 
+> logical indicating if the resulting matrix should have character (rather than NULL) rownames. The default, NA, uses NULL rownames if the data frame has ‘automatic’ row.names or for a zero-row data frame.  
+
+
+This is one way to populate a matrix from a column.
+```{r}
+x=matrix(data=c(1,2,3,4), nrow=2, ncol=2)
+x
+```
+Note that the cordinates for the matrix labels go [row,column]  
+
+The previous command can be abbreviated to:
+```{r}
+x=matrix(c(1,2,3,4),2,2)
+```
+
+This is another way.
+```{r}
+matrix(c(1,2,3,4),2,2,byrow=TRUE)
+```
+Note that previously the default was *byrow=FALSE*. Now the matrix has been constructed row first rather than column first.
+
+Let's play with matrix x
+```{r}
+sqrt(x)
+```
+This produces a element-wise square root  
+
+```{r}
+x^2
+```
+This produces a element-wise square
+
+***
+##Random Numbers
+There are many ways to generate pseudo-random values. We shall use a function that generates pseudo-random **Normally** distributed values. These are numbers that, when plotted in sufficient numbers would show a bell-shaped histogram.
+The function <code>rnorm(50)</code> will generate 50 normally distributed (random) values that have a mean of zero and a standard deviation of one (since these are the defaults).  
+The second line (below) will explicitly specify a mean of 50 and a standard deviation of 0.1.
+
+```{r}
+x=rnorm(50)
+y=x+rnorm(50,mean=50,sd=.1)
+```
+This has created two columns that have a carefully designed relationship to each other - due to the second column referencing the first column. How to we confirm this relationship? Let's try correlation.  
+
+What is the correlation between x and y?
+```{r}
+cor(x,y)
+```
+While x and y are columns (of the same length: 50), their correlation is a scalar (i.e. a column of length 1)
+
+Pseudo-random generators make use of a "seed"" value from which a sequence of values will stream.
+```{r}
+set.seed(1303)
+rnorm(50)
+```
+Now dou you see the point of the [1] to [49] boxes?
+
+Changing the seed, will generate a different sequence.
+```{r}
+set.seed(3)
+y=rnorm(100)
+```
+
+We can generate summary statistics for this column of numbers:
+```{r}
+mean(y)
+var(y)
+sqrt(var(y))
+sd(y)
+```
+
+Suppose we pretend to have two columns that are meant to be very similar:
+```{r}
+y = c(1,2,2.5,3,4)			# measured values
+haty = c(1.1,1.9,2,2.8,4.2)         # predicted values
+```
+You can also calculate a Mean Squared Error (MSE) as follows
+```{r}
+MSE = mean((y - haty)^2)
+MSE
+```
+
+...or the long way:
+```{r}
+MSE = (1/length(y))*sum((y - haty)^2)
+MSE
+```
+***
+
+## Graphics
+The strength of R is said by many to be in its excellent graphics
+Let us begin by generating some pseudo-random normal data.
+```{r}
+x=rnorm(100)
+y=rnorm(100)
+```
+
+The simplest plot is given by
+```{r}
+plot(x,y)
+```
+
+This can be improved cupon with labels and titles
+```{r}
+plot(x,y,xlab="this is the x-axis",ylab="this is the y-axis",main="Plot of X vs Y")
+```
+
+The visualisations can be captured into a pdf. The first line instructs that a pdf file called Figure.pdf be generated from all that follows.  
+The last line instructs that the pdf is finished.
+```{r}
+pdf("Figure.pdf")
+plot(x,y,col="green")
+dev.off()
+```
+Confirm that the file can be found in your current working directory and click on it. Your current working directory can be determined by the command <code>getwd()</code>  
+
+***
+##Sequences
+
+Sequences are a generated column based upon a simple pattern. To generate the sequence 1 to 10 :
+```{r}
+x=seq(1,10)
+x
+```
+
+In R there is a multitude of ways to achieve the same outcome. This is another way of generating the sequence:
+```{r}
+x=1:10
+x
+```
+
+You may want a sequence of non-integer values. For example:
+```{r}
+x=seq(-pi,pi,length=50)
+```
+
+***
+##Complex graphics
+
+Let's create a fancy contour plot using this data (as x & y) and a function that represents the z axis
+```{r}
+y=x
+f=outer(x,y,function(x,y)cos(y)/(1+x^2))
+contour(x,y,f)
+```
+Here we used an in-situ function that generated the 3rd dimension from x and y.  The <code>outer</code> function makes a matrix spanning x and y in which the values are the z values (calculated by the function)
+
+We can add more contours
+```{r}
+contour(x,y,f)
+contour(x,y,f,nlevels=45,add=T)
+```
+
+We can perform matrix operations on this matrix.
+```{r}
+fa=(f-t(f))/2
+contour(x,y,fa,nlevels=15)
+```
+
+The use of <code>image</code> replaces contours with colour gradients
+```{r}
+image(x,y,fa)
+```
+
+The z axies can be rotated and then viewed as a 2D plot. <code>persp</code> does just this. The arguments theta and phi control the angles at which the plot is viewed.
+```{r}
+persp(x,y,fa)
+persp(x,y,fa,theta=30)
+persp(x,y,fa,theta=30,phi=20)
+persp(x,y,fa,theta=30,phi=70)
+persp(x,y,fa,theta=30,phi=40)
+```
+***
+## Indexing Data
+
+Indexing is the means of locating sets of positions within matrices and columns.
+
+```{r}
+A=matrix(1:16,4,4)
+A
+```
+Suppose we want the value at row 2, column 3
+```{r}
+A[2,3]
+```
+Suppose we want the values at rows 1 and 3 where the intersect with columns 2 and 4:
+```{r}
+A[c(1,3),c(2,4)]
+```
+
+We can use sequences in place of explicit columns:
+```{r}
+A[1:3,2:4]
+```
+We can leave an aspect undefined. The default is everything in that dimension. The following will (first of all) return all values of rows 1 to 2
+```{r}
+A[1:2,]
+A[,1:2]
+A[1,] # this will be single row that fits into a column variable i.e. no longer a matrix
+```
+
+A negative column or row index is taken to mean all EXCEPT. The following will (first of all) return values of rows except for 1 and 3
+```{r}
+A[-c(1,3),]
+A[-c(1,3),-c(1,3,4)]
+```
+
+The <code>dim</code> function returns the dimensions of a matrix
+```{r}
+dim(A)
+```
+
+***
+## Processing Data
+Download the LEARN resource **Auto.csv** and copy to a suitable directory.
+
+Change the line below to point to where your file is.
+```{r}
+Auto=read.csv("Auto.csv",header=T,na.strings="?")
+```
+
+ Press *Quit* to continue (below)
+```{r eval=FALSE}
+fix(Auto)
+```
+
+```{r paged.print=FALSE}
+dim(Auto)
+Auto[1:4,]
+```
+
+You can remove all observations that have missing values with the function <code>na.omit</code>
+```{r}
+Auto=na.omit(Auto)
+dim(Auto)
+```
+In this case there were none, so the dimensions remain unchanged.  
+
+When you plot the data you need be aware of that the dataset is called and what the variables (column names) are called.
+
+```{r}
+names(Auto)
+```
+
+***
+##Graphing data
+
+The following will not work. Why not?  
+```{r eval=FALSE}
+plot(cylinders, mpg)
+```
+
+Because the are no R variables called *cylinders* and *mpg*. There are columns with those names. You can reference the *cylinders* column of *Auto* as **Auto$cylinders**
+
+Whereas the following will work. 
+```{r}
+plot(Auto$cylinders, Auto$mpg)
+```
+
+We can make the code a little easier using <code>attach</code> and <code>detach</code> (but sometimes harder to follow especially if you forget to detach)
+```{r message=FALSE, warning=FALSE}
+attach(Auto)
+plot(cylinders, mpg)
+```
+The <code>attach</code> command gives varaiable names another means to be resolved; as the names of columns of a data set.
+
+Your are on your own now to explore the following:
+```{r}
+cylinders=as.factor(cylinders)
+plot(cylinders, mpg)
+```
+
+```{r}
+plot(cylinders, mpg, col="red")
+```
+
+```{r}
+plot(cylinders, mpg, col="red", varwidth=T)
+```
+
+```{r}
+plot(cylinders, mpg, col="red", varwidth=T,horizontal=T)
+```
+
+```{r}
+plot(cylinders, mpg, col="red", varwidth=T, xlab="cylinders", ylab="MPG")
+```
+```{r}
+hist(mpg)
+hist(mpg,col=2)
+hist(mpg,col=2,breaks=15)
+```
+
+
+```{r}
+pairs(Auto)
+```
+
+The first parameter in the snippet below is a "formula" specification.
+
+```{r}
+pairs(~ mpg + displacement + horsepower + weight + acceleration, Auto)
+```
+
+
+Sadly the snippet below does not work in an R-Notebook - so try it in the RStudio console. You will have the chance to click your mouse on points in the graph. When you *Finish* the <code>identity</code> function will return the row numbers relating to the points.  
+
+```{r eval=FALSE}
+plot(horsepower,mpg)  
+identify(horsepower,mpg,name)
+```
+
+
+
+
+```{r}
+summary(Auto)
+```
+
+```{r}
+summary(mpg)
+```
+
+```{r include=FALSE}
+detach(Auto)
+```
+
+***
+End of Lab 1

@@ -1,0 +1,415 @@
+---
+title: "Classification"
+output: html_notebook
+---
+## STAT318/462 Lab3
+###Logistic Regression, LDA, QDA and KNN
+
+In this lab you will work through Section 4.6 of the course textbook, An *Introduction to Statistical Learning* (there is a link to this textbook on the Learn page). The R code from Section 4.6 is given below. 
+
+## The Stock Market Data
+The first thing to do is to load the necessary package and briefly explore the data set called **Smarket**
+```{r}
+library(ISLR)
+names(Smarket)
+dim(Smarket)
+```
+The data set has 1250 rows (observations) and 9 columns (variables)
+```{r fig.height=12, fig.width=12}
+summary(Smarket)
+pairs(Smarket)
+```
+The next line of code will fail. Why?
+```{r eval=FALSE}
+cor(Smarket)
+```
+
+> Error in cor(Smarket) : 'x' must be numeric
+
+What has happened here?  
+The <code>cor</code> function only works on numeric variables. The last column is a factor. We need to repeat this with the last column excluded. We can exclude a column by using a negative column number. There are (as usual) many other ways of doing this.
+
+```{r}
+cor(Smarket[,-9])
+```
+
+That is better.  
+
+Let's attach the data set so that we can use its columns as if they are R variables. This will apply for the rest of this session. We can plot the **Volume** variable of the **Smarket** dataset.
+```{r}
+attach(Smarket)
+plot(Volume)
+```
+How would you turn this plot into a line graph? Research this yourself.
+
+***
+
+## Logistic Regression - GLM
+
+Logistic regression is a special case of **Generalised Linear Modelling** (GLM) using the *Binomial* distribution family.
+
+The parameters to GLM are 
+
+1. the model formula
+2. the data set
+3. the distribution family
+
+Note that we do not __need__ to pass the data set because the **attach** has dealt with that.
+
+```{r}
+glm.fit=glm(Direction~Lag1+Lag2+Lag3+Lag4+Lag5+Volume, data=Smarket, family=binomial)
+summary(glm.fit)
+```
+The summary gives a lot of useful information.  
+
+The glm "model" resides in the variable called *glm.fit*. This will be some kind of complex data list that holds everything that is known about the model. This information can be hard to get at. R has a number of convenient functions for extracting the typical kinds of information that we frequently need. The **coef()** is one of these.
+```{r}
+coef(glm.fit)
+```
+
+  
+Despite its name the **summary** function does not intrinsically print anything. It only prints because we are not assigning it to a variable. If we did assign it to a variable and "looked inside" that variable we would see it is made up of lists of lists.  We can access these lists if we know what they are called. As it happens the summary output has a list named *coef*. The $ character tells R that we are interested in a named thing inside of a variable.
+```{r}
+summary(glm.fit)$coef
+```
+Notice how *summary(glm.fit)$coef* has additional information to *coef(glm.fit)*
+
+We can restrict ourselves to the fourth column. Bear in mind that the first column (of labels) is not really counted as a column. Likewise the first row (of labels) is not really a row.
+```{r}
+summary(glm.fit)$coef[,4]
+```
+Notice how R lays this out sideways to save space. Do not be fooled into thinking this means it is a set of 7 vectors of length 1. It is a single vector of length 7.
+  
+  
+  
+Suppose you want to use the model to predict the target variable **Direction**. Also let's suppose we want the *probability* of this prediction (since it is a categorical prediction). This is the effect of *type="response"* in the code below. By default the training data will be re-used since we are not specifying any specific data to predict with.
+```{r}
+glm.probs=predict(glm.fit, type="response")
+glm.probs[1:10]
+```
+  
+  
+Let's remind ourselves how **Direction** is being portrayed in the data.
+```{r}
+contrasts(Direction)
+```
+So probabilities < 0.5 are closer to 0 (Down) than 1 (Up)
+  
+Let's create a vector that contains 1250 "Down" entries. Then replace the value with "Up" if the prediction probability is > 0.5
+```{r}
+glm.pred=rep("Down",1250)
+glm.pred[glm.probs>.5]="Up"
+```
+Did you understand that 2nd line? Rather than assigning to all elements of the vector *glm.pred* we will only replace the values that positionally statisfy the rule *glm.prob > 0.5*. 
+  
+  
+Rather than listing 1250 up/down values, we shall calculate the "confusion matrix"" using **table()**. In this case we shall create a pair of vectors. The first representing the prediction, the second representing the actual.
+
+```{r}
+table(glm.pred,Direction)
+```
+
+How accurate (as a ratio between 0 and 1) have we been? Accuracy is the leading diagonal (summed) divided by the total of all the cells.
+
+```{r}
+(507+145)/1250
+```
+  
+  
+Look at this short-cut way of achieving the same thing.
+```{r}
+mean(glm.pred==Direction)
+```
+This works because logical values can be viewed as 0 for False, and 1 for True. The mean of these zero and ones amounts to the same thing. 
+
+***
+
+##Dividing up a data set##
+
+Let's create a logical vector that is True when the year is prior to 2005. We can use this new vector to choose rows from our data set.
+```{r}
+train=(Year<2005)
+Smarket.2005=Smarket[!train,]
+dim(Smarket.2005)
+```
+The new data set called **Smarket.2005** contains the rows of **Smarket** beyond 2005.
+  
+We can do the same with a vector
+```{r}
+Direction.2005=Direction[!train]
+```
+  
+Suppose we create a more flexible model (using all the predictors) BUT this time we restrict its training to data prior to 2005. We can use the *subset* parameter. We can repeat the analysis steps we used earlier.
+
+```{r}
+glm.fit=glm(Direction~Lag1+Lag2+Lag3+Lag4+Lag5+Volume,data=Smarket,family=binomial,subset=train)
+glm.probs=predict(glm.fit,Smarket.2005,type="response")
+glm.pred=rep("Down",252)
+glm.pred[glm.probs>.5]="Up"
+table(glm.pred,Direction.2005)
+```
+
+We need to turn this confusion matrix into a single accuracy value.
+
+```{r}
+mean(glm.pred==Direction.2005)
+```
+This suggests that the model is 48% accurate on unseen data (i.e. rows from 2005 that were NOT used in the training)
+  
+  
+```{r}
+mean(glm.pred!=Direction.2005)
+```
+This suggests that the model is wrong 52% of the time on unseen data.
+
+
+Let's repeat this whole process with a slightly less flexible model. We will model using predictors Lag1 & Lag2.
+```{r}
+glm.fit=glm(Direction~Lag1+Lag2,data=Smarket,family=binomial,subset=train)
+glm.probs=predict(glm.fit,Smarket.2005,type="response")
+glm.pred=rep("Down",252)
+glm.pred[glm.probs>.5]="Up"
+table(glm.pred,Direction.2005)
+```
+
+Calculate the Accuracy on unseen data
+```{r}
+mean(glm.pred==Direction.2005)
+```
+
+Calculate the proportion of time we predict "Up" correctly. Note that this is a different calculation to *Accuracy*
+```{r}
+106/(106+76)
+```
+
+Let's create two new observations and predict the outcome
+```{r}
+predict(glm.fit,newdata=data.frame(Lag1=c(1.2,1.5),Lag2=c(1.1,-0.8)), type="response")
+```
+This predicts "Down" both times.
+
+***
+
+## Linear Discriminant Analysis - LDA
+
+We are going to use the *MASS* library's **lda()** function to model *Direction* using *Lag1* & *Lag2*
+```{r}
+library(MASS)
+lda.fit=lda(Direction~Lag1+Lag2, data=Smarket, subset=train)
+lda.fit
+```
+Notice that **lda** produces different output to **glm()**
+  
+  
+We can plot the behaviour of this model;
+```{r}
+plot(lda.fit)
+```
+  
+  
+Let's use our train/test division of the data set and generate an lda model on the train data. We can examine what named things are inside the model.
+```{r}
+lda.pred=predict(lda.fit, Smarket.2005)
+names(lda.pred)
+```
+
+Let's look at the "class" aspect of the model:
+```{r}
+lda.class=lda.pred$class
+table(lda.class,Direction.2005)
+```
+
+Calculate accuracy:
+```{r}
+mean(lda.class==Direction.2005)
+```
+
+  
+Applying a 50% threshold to the posterior probabilities allows us to recreate the predictions contained in *lda.pred$class*.
+```{r}
+sum(lda.pred$posterior[,1]>=.5)
+sum(lda.pred$posterior[,1]<.5)
+```
+
+The posterior probablilities relate to the classifications using a threshold of 0.5
+```{r}
+lda.pred$posterior[1:20,1]
+lda.class[1:20]
+```
+Note the posterior probabilities are that the market will drop.
+  
+  
+We can utilise a different threshold; say 0.9
+```{r}
+sum(lda.pred$posterior[,1]>.9)
+```
+There were no occasions in all of 2005 when that threshold was met.
+
+***
+
+## Quadratic Discriminant Analysis - QDA
+
+We shall utilise the **qda()** model (also) from the *MASS* library.
+
+```{r}
+qda.fit=qda(Direction~Lag1+Lag2,data=Smarket,subset=train)
+qda.fit
+```
+
+```{r}
+qda.class=predict(qda.fit,Smarket.2005)$class
+table(qda.class,Direction.2005)
+mean(qda.class==Direction.2005)
+```
+The accuracy of the model on unseen data was 60%. This is looking better.
+
+***
+
+## K-Nearest Neighbors - KNN
+We shall utilise the **knn()** model from the *class* library.  
+We shall reorganise the data formally into a test data set and a train data set.
+
+```{r}
+library(class)
+train.X=cbind(Lag1,Lag2)[train,]
+test.X=cbind(Lag1,Lag2)[!train,]
+train.Direction=Direction[train]
+```
+  
+Next, let's train the knn (using k=1) - we will make this reproducable by setting the random seed
+```{r}
+set.seed(1)
+knn.pred=knn(train.X,test.X,train.Direction,k=1)
+```
+  
+Let's calculate its training accuracy
+```{r}
+table(knn.pred,Direction.2005)
+(83+43)/252
+```
+The accuracy is a mere 50%
+
+Let's change a meta parameter of the algorithm (k=3 this time) and try again.
+```{r}
+knn.pred=knn(train.X,test.X,train.Direction,k=3)
+table(knn.pred,Direction.2005)
+mean(knn.pred==Direction.2005)
+```
+Now we have an accuracy of 54%. Maybe further tweaking of the *k* parameter will produce an even better result.
+
+***
+
+## An Application to Caravan Insurance Data
+
+```{r}
+dim(Caravan)
+attach(Caravan)
+summary(Purchase)
+```
+The values of the *Purchase* variable of *Caravan* data set are far from balanced.
+
+The proportion of *Yes* is
+```{r}
+348/5822
+```
+That is 6%. If we did no modelling except to always predict "No" we would be right 94% of the time!
+  
+  
+Another problem with this data set is that the predictors have wildly different scales. In this situation it is good practice to subtract the column means and to then divide by the standard deviation. There is an R function for doing this: **scale()**.  
+Since column 86 is a factor we shall exclude it from the scaling (as it has no meaning for factors). We can conveniently exclude a column by making its index negative
+```{r}
+standardized.X=scale(Caravan[,-86])
+```
+  
+  
+We shall see the effect this has on the variance of columns before and after the scaling
+```{r}
+var(Caravan[,1])
+var(Caravan[,2])
+var(standardized.X[,1])
+var(standardized.X[,2])
+```
+We shall set aside the first 1000 rows as a test set. This is rarely "best prectice" but lets not focus on the resampling strategy.
+```{r}
+test=1:1000
+train.X=standardized.X[-test,]
+test.X=standardized.X[test,]
+train.Y=Purchase[-test]
+test.Y=Purchase[test]
+```
+
+Let's use **knn()** to train a model
+```{r}
+set.seed(1)
+knn.pred=knn(train.X,test.X,train.Y,k=1)
+```
+
+Let's assess the model using the test data
+```{r}
+mean(test.Y!=knn.pred)
+```
+Above is the error rate.
+
+```{r}
+mean(test.Y!="No") 
+```
+Above is the proportion of "Yes" train cases
+
+```{r}
+table(knn.pred,test.Y)
+```
+Above is the confusion matrix for this model (using test data)  
+  
+  
+  
+The accuracy of the "yes" predictions can be calculated in the usual way:
+```{r}
+9/(68+9)
+```
+  
+  
+Let's repeat this with k=3
+```{r}
+knn.pred=knn(train.X,test.X,train.Y,k=3)
+table(knn.pred,test.Y)
+5/26
+```
+
+And again with k =5
+```{r}
+knn.pred=knn(train.X,test.X,train.Y,k=5)
+table(knn.pred,test.Y)
+```
+The **knn** model predicts "Yes" correctly 27% of the time.
+```{r}
+4/15
+```
+
+Shall we try logistic regression?
+```{r}
+glm.fit=glm(Purchase~.,data=Caravan,family=binomial,subset=-test)
+glm.probs=predict(glm.fit,Caravan[test,],type="response")
+```
+
+Let's use a threshold of 50%
+```{r}
+glm.pred=rep("No",1000)
+glm.pred[glm.probs>.5]="Yes"
+table(glm.pred,test.Y)
+```
+Now we shall try a threshold of 25%
+```{r}
+glm.pred=rep("No",1000)
+glm.pred[glm.probs>.25]="Yes"
+table(glm.pred,test.Y)
+```
+
+The **glm** model predicts "Yes" correctly 33% of the time.
+```{r}
+11/(22+11)
+```
+
+
+***
+
+End of Lab 3
