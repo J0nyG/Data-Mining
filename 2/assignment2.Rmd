@@ -1,0 +1,118 @@
+---
+title: "STAT 462 Assignment 2"
+output:
+  word_document: default
+  pdf_document: default
+---
+1.(a)
+```{r}
+b0 = -16
+b1 = 1.4
+b2 = 0.3
+x1 = 5
+x2 = 36
+exp(b0 + b1*x1 + b2*x2)/(1 + exp(b0 + b1*x1 + b2*x2))
+```
+
+1.(b)
+1.4*x1 - 10.6 = 0
+```{r}
+x1 = 10.6 / 1.4
+x1
+```
+
+
+2.(a)
+```{r}
+train = read.csv("BankTrain.csv")
+test = read.csv("BankTest.csv")
+glm.fit = glm(y~x1+x3, data=train, family=binomial)
+summary(glm.fit)
+```
+Comment: The coefficients are significant. x1 and x3 are well related to y.
+
+2.(b)(i)
+```{r}
+beta = coef(glm.fit)
+plot(train$x1, train$x3, col=train$y + 1, pch=21, cex=0.8, xlab="x1", ylab="x3")
+abline(-beta[1]/beta[3], -beta[2]/beta[3], col = "blue")
+legend("topright", legend = c("Forged", "Genuine"), col = c("red", "black"), pch = 21, horiz = FALSE)
+```
+2.(b)(ii)
+```{r}
+glm.probs = predict(glm.fit, test, type="response")
+glm.pred = rep(0, 412)
+glm.pred[glm.probs>0.5] = 1
+table(glm.pred, test$y)
+```
+```{r}
+204/(204 + 32)
+152/(24 +152)
+mean(glm.pred == test$y)
+```
+Comment: The specificity is 0.8644068, the sensitivity is 0.8636364, the accuracy is 0.8640777.
+
+2.(b)(iii)
+```{r}
+glm.probs = predict(glm.fit, test, type="response")
+glm.pred = rep(0, 412)
+glm.pred[glm.probs>0.3] = 1
+table(glm.pred, test$y)
+mean(glm.pred == test$y)
+```
+```{r}
+glm.probs = predict(glm.fit, test, type="response")
+glm.pred = rep(0, 412)
+glm.pred[glm.probs>0.6] = 1
+table(glm.pred, test$y)
+mean(glm.pred == test$y)
+```
+Comment: Both of the accuracies decreased or the overall error rate increased. 0.3 threshold may be preferred when I'm interested in the minority class of an imbalanced data set.
+
+3.(a)
+```{r}
+library(MASS)
+lda.fit = lda(y~x1+x3, data = train)
+lda.pred = predict(lda.fit, test)
+lda.class = lda.pred$class
+table(lda.class, test$y)
+```
+```{r}
+mean(lda.class == test$y)
+```
+
+3(b)
+```{r}
+qda.fit = qda(y~x1+x3, data = train)
+qda.pred = predict(qda.fit, test)
+qda.class = qda.pred$class
+table(qda.class, test$y)
+```
+```{r}
+mean(qda.class == test$y)
+```
+
+3(c)
+DDA has higher accuracy than LDA. LDA could hardly follow the non-linear variation. I recommend QDA for this problem because it has the highest accuracy.
+
+
+4
+```{r}
+x = seq(-10,10,length=100)
+plot(x,0.4*dnorm(x,0,2),col = "blue",type = "l",
+main = "Conditional densities multiplied by their prior probabilities",
+ylab = "pi_k f_k",xlab = "X",lwd=2)
+points(x,0.6*dnorm(x,2,2),col="red",type="l",lwd=2)
+legend("topright",legend = c("Class 0", "Class 1"),col = c("blue","red"),lwd = 3,
+text.col = "black",horiz = FALSE)
+```
+0.4*exp(-x^2/(2*4)) = 0.6*exp(-(x-2)^2/(2*4))
+```{r}
+x = 1 - 2*log(1.5)
+x
+```
+```{r}
+Bayeserror = 0.6 * pnorm(0.1890698, 2, 2) + 0.4 * (1 - pnorm(0.1890698, 0, 2))
+Bayeserror
+```
+

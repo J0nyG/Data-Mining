@@ -1,0 +1,269 @@
+---
+output:
+  html_document: default
+  word_document: default
+---
+Name: Xin Gao
+Student ID: 43044879
+1(a)
+```{r}
+library(tree)
+train = read.csv("carseatsTrain.csv", header = TRUE)
+test = read.csv("carseatsTest.csv", header = TRUE)
+train$ShelveLoc = as.factor(train$ShelveLoc)
+train$Urban = as.factor(train$Urban)
+train$US = as.factor(train$US)
+test$ShelveLoc = as.factor(test$ShelveLoc)
+test$Urban = as.factor(test$Urban)
+test$US = as.factor(test$US)
+carseats = tree(Sales~., train)
+summary(carseats)
+```
+
+```{r}
+plot(carseats)
+text(carseats, pretty = 0, cex = 0.5)
+```
+The tree has 14 terminal nodes. "ShelveLoc" "Income" "Population" "Age" "CompPrice" are the most important predictors.
+
+```{r}
+tr.pred = predict(carseats, newdata = train)
+error.tr = mean((tr.pred - train$Sales)^2)
+error.tr # Training MSE
+```
+```{r}
+te.pred = predict(carseats, newdata = test)
+error.te = mean((te.pred - test$Sales)^2)
+error.te # Testing MSE
+```
+The training MSE is 3.521092, while the test MSE is 5.163211.
+
+1(b)
+```{r}
+cv.carseats = cv.tree(carseats)
+cv.carseats
+```
+```{r}
+plot(cv.carseats$size, cv.carseats$dev, type='b')
+```
+use best = 3
+
+```{r}
+prune.carseats = prune.tree(carseats, best=3)
+plot(prune.carseats)
+text(prune.carseats, pretty=0)
+```
+```{r}
+te.pred = predict(prune.carseats, newdata = test)
+error.te = mean((te.pred-test$Sales)^2)
+error.te
+```
+The pruned tree does not perform better because the test error increased slightly.
+
+1(c)
+```{r}
+library(randomForest)
+set.seed(1)
+bag.carseats = randomForest(Sales~., data=train, mtry=9)
+bag.carseats
+```
+```{r}
+tr.pred.ba = predict(bag.carseats, newdata=train)
+error.tr.ba = mean((tr.pred.ba-train$Sales)^2)
+error.tr.ba # Training MSE of Bagging
+```
+```{r}
+te.pred.ba = predict(bag.carseats, newdata=test)
+error.te.ba = mean((te.pred.ba-test$Sales)^2)
+error.te.ba # Test MSE of Bagging
+```
+```{r}
+rf.carseats = randomForest(Sales~., data=train)
+tr.pred.rf = predict(rf.carseats, newdata=train)
+error.tr.rf = mean((tr.pred.rf-train$Sales)^2)
+error.tr.rf  #Training MSE of random forest
+```
+
+```{r}
+te.pred.rf = predict(rf.carseats, newdata=test) 
+error.te.rf = mean((te.pred.rf-test$Sales)^2)
+error.te.rf  #Test MSE of random forest
+```
+(It seems you don't need to specify the mtry, random forest output the best one. In this case, mtry = 4)
+Random forest does a bit better than bagging because it has slightly lower test error. 
+So decorrelating trees works for this problem, not much though.
+
+1(d)
+Tried different settings:
+set n.trees = 5000, the test error goes slightly up
+set interation.depth = 4, the test error goes up by 0.4
+set shringkage = 0.1, the test error goes up by 1.3
+Ultimately, I set the parameters as follow:
+```{r}
+library(gbm)
+boost.carseats = gbm(Sales~., data=train, distribution="gaussian", n.trees=1000, interaction.depth=1, shrinkage=0.01)
+summary(boost.carseats)
+```
+
+```{r}
+tr.pred.bo = predict(boost.carseats, newdata=train, n.trees=1000) 
+error.tr.bo = mean((tr.pred.bo-train$Sales)^2)
+error.tr.bo  #Training MSE of boosting
+```
+
+```{r}
+te.pred.bo = predict(boost.carseats, newdata=test, n.trees=1000) 
+error.te.bo = mean((te.pred.bo-test$Sales)^2)
+error.te.bo  #Test MSE of boosting
+```
+Training MSE is 3.856231, test MSE is 4.70364.
+Boosted regression tree has the lowest test MSE.
+
+1(e)
+Boosted regression tree performs the best. The most important predictors are ShelveLoc, Age, Advertising.
+
+
+2(a)
+see last page
+
+2(b)
+σ{d,e} = 5
+σ{b} = 8
+σ{b,d,e} = 3
+
+c({d,e} -> {b}) = 3/5 = 0.6
+lift({d,e} -> {b}) = 0.6/(8/10) = 0.75
+
+The chance of occurrence of {b} when {d,e} are on transaction is 0.6.
+lift({d,e} -> {b}) < 1 means {d,e} and {b}) are negatively correlated. The occurrence of {d,e} inhibits the occurrence of {b}.
+
+
+3(a)
+```{r}
+data = read.csv("A3data2.csv", header=TRUE)
+km.out = kmeans(data[,1:2], 3, nstart=100)
+plot(data[,1:2], col=(km.out$cluster), main = "K-Means Clustering Results with K=3", pch = 20)
+```
+
+3(b)
+```{r}
+hc.complete = hclust(dist(data[,1:2]), method = "complete")
+plot(hc.complete, main = "Complete Linkage", xlab = "", sub = "", labels = FALSE)
+```
+```{r}
+plot(data[,1:2], col=cutree(hc.complete, 3))
+```
+```{r}
+hc.single = hclust(dist(data[,1:2]), method = "single")
+plot(hc.single, main = "Single Linkage", xlab = "", sub = "", labels = FALSE)
+```
+```{r}
+plot(data[,1:2], col=cutree(hc.single, 3))
+```
+3(c)
+```{r}
+table(km.out$cluster, data[,3])
+```
+```{r}
+table(cutree(hc.complete, 3), data[,3])
+```
+
+```{r}
+table(cutree(hc.single, 3), data[,3])
+```
+k-means clustering correctly predicted 534 points out of 2400. (it would change evrytime run it)
+Complete linkage correctly predicted 959 points out of 2400.
+Single linkage correctly predicted 201 points out of 2400.
+Complete linkage has the lowest error rate, however the plot still does not look good. It seperates the largest cluster into three groups.The single linkage probably was misguided by several outliers and just simply cluster nearly all the points in one cluster. K means works well in the two small clusters, however, in the big cluster, it seperated it into three groups like complete linkage. This is probably one of the drawbacks of k means because it is not easy for it to distinguish big clusters.
+Overall, I think none of them performs well in this data set.
+
+3(d)
+```{r}
+cluster = data[,3]
+data = scale(data[,1:2], center=TRUE, scale=TRUE)
+data = data.frame(data, cluster)
+km.out = kmeans(data[,1:2], 3, nstart=100)
+plot(data[,1:2], col=(km.out$cluster), main = "K-Means Clustering Results with K=3", pch = 20)
+```
+```{r}
+hc.complete = hclust(dist(data[,1:2]), method = "complete")
+plot(hc.complete, main = "Complete Linkage", xlab = "", sub = "", labels = FALSE)
+```
+```{r}
+plot(data[,1:2], col=cutree(hc.complete, 3))
+```
+```{r}
+hc.single = hclust(dist(data[,1:2]), method = "single")
+plot(hc.single, main = "Single Linkage", xlab = "", sub = "", labels = FALSE)
+```
+```{r}
+plot(data[,1:2], col=cutree(hc.single, 3))
+```
+```{r}
+table(km.out$cluster, data[,3])
+```
+```{r}
+table(cutree(hc.complete, 3), data[,3])
+```
+```{r}
+table(cutree(hc.single, 3), data[,3])
+```
+Only the complete linkage improved a lot. Other two does not improve.
+
+4(a)
+```{r}
+train = read.csv("BankTrain.csv", header=TRUE)
+train$y = as.factor(train$y)
+test = read.csv("BankTest.csv", header=TRUE)
+test$y = as.factor(test$y)
+plot(train$x1, train$x3, col=train$y, xlab="x1", ylab="x3")
+legend("topright", legend=c("Forged","Genuine"), col=c("red","black"), pch=21)
+```
+From the chart, a separating hyperplane does not exist because there is not a clear seperate between the two clusters.
+
+4(b)
+```{r}
+library(e1071)
+set.seed(2)
+tune.out = tune(svm, y~x1+x3, data=train, kernel="linear", ranges=list(cost=c(0.01,0.1,1,10,100,1000)))
+bestmod = tune.out$best.model
+summary(bestmod)
+```
+Best cost: 0.1
+
+```{r}
+plot(bestmod, train[,c(1,3,5)])
+```
+```{r}
+ypred = predict(bestmod, test)
+table(predict=ypred, truth=test$y)
+```
+```{r}
+362/412
+```
+
+362 observations are predicted right, while 50 observations are predicted wrong.
+The accuracy is 0.8786408.
+
+4(c)
+```{r}
+set.seed(3)
+tune.out = tune(svm, y~x1+x3, data=train, kernel="radial", ranges=list(cost=c(0.01,0.1,1,10,100,1000), gamma=c(0.5,1,2,3,4)))
+bestmod = tune.out$best.mod
+summary(tune.out)
+```
+Best cost: 100
+Best gama: 0.5
+
+```{r}
+plot(bestmod, train[,c(1,3,5)])
+```
+```{r}
+ypred = predict(bestmod, test)
+table(predict=ypred, truth=test$y)
+```
+```{r}
+378/412
+```
+SVM performs better because it creates a non-linear boundary such that it fits the data more precisely.
+
